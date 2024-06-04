@@ -1,2 +1,6 @@
 
 .idea/
+
+resources/games.csv
+
+resources/user_ratings.csv
