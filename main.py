@@ -1,12 +1,11 @@
 import os
-
-import numpy as np
-from pykeen.pipeline import pipeline
-from pykeen.triples import TriplesFactory
 import pandas
 import pickle
+from pykeen.evaluation import RankBasedEvaluator
+from pykeen.pipeline import pipeline
+from pykeen.triples import TriplesFactory
 
-def import_data(thousandths, reimport=True):
+def import_data(thousandths, reimport=True, random_reduction=False):
 
     path = 'output/importedData.pkl'
     if not reimport and os.path.exists(path):
@@ -25,10 +24,18 @@ def import_data(thousandths, reimport=True):
 
     # Merge the dataframes on BGGId and select the necessary columns
     merged_df = pandas.merge(user_ratings_df, games_df, on='BGGId')[['Username', 'Rating', 'Name']]
+    merged_df = merged_df.sort_values(by='Name')
 
-    # Reduce the size of the dataset by 99%
+    # Reduce the size of the dataset
     print(f'Size before reduction is: {merged_df.shape[0]}')
-    merged_df = merged_df.sample(frac=thousandths / 1000, random_state=42)
+    factor = thousandths / 1000
+    if random_reduction:
+        print("The reduction is achieved by random sampling")
+        merged_df = merged_df.sample(frac=factor, random_state=42)
+    else:
+        print("The reduction is achieved by taking the first elements of the dataframe")
+        x = int(len(merged_df) * factor)
+        merged_df = merged_df.head(x)
     print(f'Size after reduction is: {merged_df.shape[0]}')
 
     # Calculate the average rating
@@ -88,21 +95,18 @@ def train_model(triple_factory, recreate=True):
         epochs=5
     )
 
-    with open(path, 'wb') as file:
-        pickle.dump(result, file)
-    return result
 
 if __name__ == '__main__':
 
-    reimportData = False
-    recreateTriplesFactory = False
-    recreateTraining = False
+    reimportData = True
+    recreateTriplesFactory = True
+    recreateTraining = True
+
+    randomReduction = False
     percentageOfTriples = 5
 
-    importedData = import_data(percentageOfTriples, reimportData)
+    importedData = import_data(percentageOfTriples, reimportData, randomReduction)
 
     triples = convert_to_triples(importedData, recreateTriplesFactory)
 
     training_result = train_model(triples, recreateTraining)
-
-    print(training_result)
