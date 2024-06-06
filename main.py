@@ -6,7 +6,7 @@ from pykeen.triples import TriplesFactory
 import pandas
 import pickle
 
-def import_data(percentage, reimport=True):
+def import_data(thousandths, reimport=True):
 
     path = 'output/importedData.pkl'
     if not reimport and os.path.exists(path):
@@ -28,7 +28,7 @@ def import_data(percentage, reimport=True):
 
     # Reduce the size of the dataset by 99%
     print(f'Size before reduction is: {merged_df.shape[0]}')
-    merged_df = merged_df.sample(frac=percentage/100, random_state=42)
+    merged_df = merged_df.sample(frac=thousandths / 1000, random_state=42)
     print(f'Size after reduction is: {merged_df.shape[0]}')
 
     # Calculate the average rating
@@ -70,28 +70,14 @@ def convert_to_triples(data_to_convert, recreate=True):
         pickle.dump(triple_factory, file)
     return triple_factory
 
-if __name__ == '__main__':
-
-    reimportData = False
-    recreateTriplesFactory = True
-    percentageOfTriples = 1
-
-    importedData = import_data(percentageOfTriples, reimportData)
-
-    triples = convert_to_triples(importedData, recreateTriplesFactory)
-
-    #training_result = train_model(tf, False)
-
-    #print(training_result)
 
 def train_model(triple_factory, recreate=True):
 
-    path = 'output/trainedModel'
-
+    path = 'output/trainedModel.pkl'
     if not recreate and os.path.exists(path):
-        print("Loading Trained Model...")
-        from pykeen.pipeline import PipelineResult
-        return PipelineResult.load_from_directory(path)
+        print("Loading Trained Model...\n")
+        with open(path, 'rb') as file:
+            return pickle.load(file)
 
     training, testing = triple_factory.split()
 
@@ -102,5 +88,21 @@ def train_model(triple_factory, recreate=True):
         epochs=5
     )
 
-    result.save_to_directory('output/test_pre_stratified_transe')
+    with open(path, 'wb') as file:
+        pickle.dump(result, file)
     return result
+
+if __name__ == '__main__':
+
+    reimportData = False
+    recreateTriplesFactory = False
+    recreateTraining = False
+    percentageOfTriples = 5
+
+    importedData = import_data(percentageOfTriples, reimportData)
+
+    triples = convert_to_triples(importedData, recreateTriplesFactory)
+
+    training_result = train_model(triples, recreateTraining)
+
+    print(training_result)
