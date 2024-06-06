@@ -89,12 +89,13 @@ def train_model(triples_factory, recreate=True):
 
     print('Start Training Model ...')
 
-    training, validation, testing = triples_factory.split(ratios=(.6, .2, .2))
+    training, validation, testing = triples_factory.split(ratios=(.6, .2, .2), random_state=42)
     evaluator = RankBasedEvaluator()
 
     result = pipeline(
         model='TransE',
         loss="softplus",
+        random_seed=42,
         training=training,
         testing=testing,
         validation=validation,
@@ -126,10 +127,10 @@ if __name__ == '__main__':
     recreateTraining = True
 
     randomReduction = False
-    oneThousandthOfTriples = 8
+    oneThousandthOfTriples = 5
 
     importedData = import_data(oneThousandthOfTriples, reimportData, randomReduction)
 
-    triples = convert_to_triples(importedData, recreateTriplesFactory)
+    #triples = convert_to_triples(importedData, recreateTriplesFactory)
 
-    training_result = train_model(triples, recreateTraining)
+    #training_result = train_model(triples, recreateTraining)
