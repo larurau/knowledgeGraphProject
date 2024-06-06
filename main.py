@@ -50,11 +50,42 @@ def import_data(thousandths, reimport=True, random_reduction=False):
     only_likes = merged_df[merged_df['Rating'] == 'likes']
     print(f'Size of merged after only considering likes is: {only_likes.shape[0]}')
 
+
+    # Add mechanics
+    print("Adding mechanics:")
+    mechanics_csv_path = 'resources/mechanics.csv'
+    mechanics_df = pandas.read_csv(mechanics_csv_path)
+    print(f'Size of mechanics is: {mechanics_df.shape[0]}')
+    merged_mechanics_df = pandas.merge(games_df, mechanics_df, on='BGGId')
+    print(f'Size of merged mechanics is: {merged_mechanics_df.shape[0]}')
+
+    value_vars = [col for col in merged_mechanics_df.columns if col not in ['BGGId', 'Name']]
+    melted_df = pandas.melt(merged_mechanics_df, id_vars=['Name'], value_vars=value_vars, var_name='Mechanic',
+                        value_name='Indicator')
+
+    # Filter for rows where Indicator is 1 (where the game has the mechanic)
+    filtered_df = melted_df[melted_df['Indicator'] == 1].copy()
+    # Add a fixed relationship column
+    filtered_df['Relationship'] = 'hasMechanic'
+    # Create the triples DataFrame
+    triples_df = filtered_df[['Name', 'Relationship', 'Mechanic']]
+
+    # Display the resulting DataFrame
+    print(f'Split up the number of mechanic relations is: {triples_df.shape[0]}')
+
+    #Combining all triples:
+    print(f'Combining {only_likes.shape[0]}  like relations with {triples_df.shape[0]} mechanic relations')
+    triples_df.columns = ['Subject', 'Predicate', 'Object']
+    only_likes.columns = ['Subject', 'Predicate', 'Object']
+
+    combined_df = pandas.concat([triples_df, only_likes], ignore_index=True)
+    print(f'Combined dataframe has: {combined_df.shape[0]}')
+
     print('Finished Importing\n')
 
     with open(path, 'wb') as file:
-        pickle.dump(only_likes, file)
-    return only_likes
+        pickle.dump(combined_df, file)
+    return combined_df
 
 
 def convert_to_triples(data_to_convert, recreate=True):
@@ -69,9 +100,11 @@ def convert_to_triples(data_to_convert, recreate=True):
 
     data_to_convert = data_to_convert.astype(str)
 
-    triples = data_to_convert[['Username', 'Rating', 'Name']].values
+    triples = data_to_convert[['Subject', 'Predicate', 'Object']].values
 
     triple_factory = TriplesFactory.from_labeled_triples(triples)
+
+    print(triple_factory)
 
     print('Finished Converting\n')
 
@@ -132,6 +165,6 @@ if __name__ == '__main__':
 
     importedData = import_data(oneThousandthOfTriples, reimportData, randomReduction)
 
-    #triples = convert_to_triples(importedData, recreateTriplesFactory)
+    triples = convert_to_triples(importedData, recreateTriplesFactory)
 
-    #training_result = train_model(triples, recreateTraining)
+    training_result = train_model(triples, recreateTraining)

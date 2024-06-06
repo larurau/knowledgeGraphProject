@@ -7,3 +7,4 @@ It can be found at: https://www.kaggle.com/datasets/threnjen/board-games-databas
 Currently the following files should be placed in the resources folder:
 - games.csv
 - user_ratings.csv
+- mechanics.csv

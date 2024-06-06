@@ -10,3 +10,5 @@ output/importedData.pkl
 output/trainedModel.pkl
 
 output/triplesFactory.pkl
+
+resources/mechanics.csv
