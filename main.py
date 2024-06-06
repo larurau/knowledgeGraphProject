@@ -1,6 +1,7 @@
 import os
 import pandas
 import pickle
+
 from pykeen.evaluation import RankBasedEvaluator
 from pykeen.pipeline import pipeline
 from pykeen.triples import TriplesFactory
@@ -13,7 +14,7 @@ def import_data(thousandths, reimport=True, random_reduction=False):
         with open(path, 'rb') as file:
             return pickle.load(file)
 
-    print('Start Importing')
+    print('Start Importing ...')
 
     games_csv_path = 'resources/games.csv'
     user_ratings_csv_path = 'resources/user_ratings.csv'
@@ -63,7 +64,7 @@ def convert_to_triples(data_to_convert, recreate=True):
         with open(path, 'rb') as file:
             return pickle.load(file)
 
-    print('Start Converting Data')
+    print('Start Converting Data ...')
 
     data_to_convert = data_to_convert.astype(str)
 
@@ -78,7 +79,7 @@ def convert_to_triples(data_to_convert, recreate=True):
     return triple_factory
 
 
-def train_model(triple_factory, recreate=True):
+def train_model(triples_factory, recreate=True):
 
     path = 'output/trainedModel.pkl'
     if not recreate and os.path.exists(path):
@@ -86,14 +87,36 @@ def train_model(triple_factory, recreate=True):
         with open(path, 'rb') as file:
             return pickle.load(file)
 
-    training, testing = triple_factory.split()
+    print('Start Training Model ...')
+
+    training, validation, testing = triples_factory.split(ratios=(.6, .2, .2))
+    evaluator = RankBasedEvaluator()
 
     result = pipeline(
+        model='TransE',
+        loss="softplus",
         training=training,
         testing=testing,
-        model='TransE',
-        epochs=5
+        validation=validation,
+        model_kwargs=dict(embedding_dim=3, random_seed=42),
+        optimizer_kwargs=dict(lr=0.1),
+        training_kwargs=dict(num_epochs=5, use_tqdm_batch=False),
+        evaluator=evaluator
     )
+
+    # Print the metrics
+    print("Evaluating trained model:")
+    print(f"Hits@1: {result.metric_results.get_metric('hits@1')}")
+    print(f"Hits@3: {result.metric_results.get_metric('hits@3')}")
+    print(f"Hits@5: {result.metric_results.get_metric('hits@5')}")
+    print(f"Hits@10: {result.metric_results.get_metric('hits@10')}")
+    print(f"Mean Reciprocal Rank: {result.metric_results.get_metric('mean_reciprocal_rank')}")
+
+    print("Finished training\n")
+
+    with open(path, 'wb') as file:
+        pickle.dump(result, file)
+    return result
 
 
 if __name__ == '__main__':
@@ -103,9 +126,9 @@ if __name__ == '__main__':
     recreateTraining = True
 
     randomReduction = False
-    percentageOfTriples = 5
+    oneThousandthOfTriples = 8
 
-    importedData = import_data(percentageOfTriples, reimportData, randomReduction)
+    importedData = import_data(oneThousandthOfTriples, reimportData, randomReduction)
 
     triples = convert_to_triples(importedData, recreateTriplesFactory)
 
