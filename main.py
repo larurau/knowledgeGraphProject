@@ -6,7 +6,7 @@ from pykeen.triples import TriplesFactory
 import pandas
 import pickle
 
-def import_data(reimport=True):
+def import_data(percentage, reimport=True):
 
     path = 'output/importedData.pkl'
     if not reimport and os.path.exists(path):
@@ -23,15 +23,12 @@ def import_data(reimport=True):
     games_df = pandas.read_csv(games_csv_path)[['BGGId', 'Name']]
     user_ratings_df = pandas.read_csv(user_ratings_csv_path)[['BGGId', 'Rating', 'Username']]
 
-    print('Restructuring dataset:')
-
     # Merge the dataframes on BGGId and select the necessary columns
     merged_df = pandas.merge(user_ratings_df, games_df, on='BGGId')[['Username', 'Rating', 'Name']]
-    print(f'Merged data has columns: {merged_df.columns}: ')
 
     # Reduce the size of the dataset by 99%
     print(f'Size before reduction is: {merged_df.shape[0]}')
-    merged_df = merged_df.sample(frac=0.01, random_state=42)
+    merged_df = merged_df.sample(frac=percentage/100, random_state=42)
     print(f'Size after reduction is: {merged_df.shape[0]}')
 
     # Calculate the average rating
@@ -40,24 +37,18 @@ def import_data(reimport=True):
 
     # Replace 'Rating' with 'likes' if above median, 'does not like' if below or equal to the median
     merged_df['Rating'] = merged_df['Rating'].apply(lambda x: 'likes' if x >= median_rating else 'does not like')
-    print('Example row:')
-    print(merged_df.head(1))
-
-    # Calculate the frequency of each rating after filtering
-    rating_counts = merged_df['Rating'].value_counts()
-    print("Frequency of each rating, as a lot of values fall directly on the median these values are not equal:")
-    print(rating_counts)
 
     only_likes = merged_df[merged_df['Rating'] == 'likes']
+    print(f'Size after only considering likes is: {only_likes.shape[0]}')
 
     print('Finished Importing\n')
 
     with open(path, 'wb') as file:
-        pickle.dump(merged_df, file)
+        pickle.dump(only_likes, file)
     return only_likes
 
 
-def create_pykeen_data(data_to_convert, percentage, recreate=True):
+def create_pykeen_data(data_to_convert, recreate=True):
 
     path = 'output/triplesFactory.pkl'
     if not recreate and os.path.exists(path):
@@ -88,9 +79,9 @@ if __name__ == '__main__':
     recreateTriplesFactory = False
     percentageOfTriples = 1
 
-    importedData = import_data(reimportData)
+    importedData = import_data(percentageOfTriples, reimportData)
 
-    tf = create_pykeen_data(importedData, percentageOfTriples, recreateTriplesFactory)
+    tf = create_pykeen_data(importedData, recreateTriplesFactory)
 
     #training_result = train_model(tf, False)
 
