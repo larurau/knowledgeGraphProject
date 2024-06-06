@@ -10,7 +10,7 @@ def import_data(percentage, reimport=True):
 
     path = 'output/importedData.pkl'
     if not reimport and os.path.exists(path):
-        print("Loading imported data from file...")
+        print("Loading imported data from file...\n")
         with open(path, 'rb') as file:
             return pickle.load(file)
 
@@ -48,11 +48,11 @@ def import_data(percentage, reimport=True):
     return only_likes
 
 
-def create_pykeen_data(data_to_convert, recreate=True):
+def convert_to_triples(data_to_convert, recreate=True):
 
     path = 'output/triplesFactory.pkl'
     if not recreate and os.path.exists(path):
-        print("Loading TriplesFactory from file...")
+        print("Loading TriplesFactory from file...\n")
         with open(path, 'rb') as file:
             return pickle.load(file)
 
@@ -64,9 +64,6 @@ def create_pykeen_data(data_to_convert, recreate=True):
 
     triple_factory = TriplesFactory.from_labeled_triples(triples)
 
-    print('Triple Factory before reduction:')
-    print(triple_factory)
-
     print('Finished Converting\n')
 
     with open(path, 'wb') as file:
@@ -75,13 +72,13 @@ def create_pykeen_data(data_to_convert, recreate=True):
 
 if __name__ == '__main__':
 
-    reimportData = True
-    recreateTriplesFactory = False
+    reimportData = False
+    recreateTriplesFactory = True
     percentageOfTriples = 1
 
     importedData = import_data(percentageOfTriples, reimportData)
 
-    tf = create_pykeen_data(importedData, recreateTriplesFactory)
+    triples = convert_to_triples(importedData, recreateTriplesFactory)
 
     #training_result = train_model(tf, False)
 
