@@ -4,3 +4,9 @@
 resources/games.csv
 
 resources/user_ratings.csv
+
+output/importedData.pkl
+
+output/trainedModel.pkl
+
+output/triplesFactory.pkl
