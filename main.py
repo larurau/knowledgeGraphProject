@@ -1,25 +1,18 @@
-from pykeen.datasets import Nations
+import os
+
+import numpy as np
+from pykeen.pipeline import pipeline
+from pykeen.triples import TriplesFactory
 import pandas
+import pickle
 
-def show_data_structure():
-    dataset = Nations()
-    print(f'Nations dataset: {dataset.training.mapped_triples[:5]}')
+def import_data(reimport=True):
 
-    entity_to_id = dataset.training.entity_to_id
-    id_to_entity = {v: k for k, v in entity_to_id.items()}
-    relation_to_id = dataset.training.relation_to_id
-    id_to_relation = {v: k for k, v in relation_to_id.items()}
-
-    # Print some of the entity and relation mappings
-    print("\nSample entity mappings:")
-    for entity, id_ in list(entity_to_id.items())[:5]:
-        print(f"{id_}: {entity}")
-
-    print("\nSample relation mappings:")
-    for relation, id_ in list(relation_to_id.items())[:5]:
-        print(f"{id_}: {relation}")
-
-def import_data():
+    path = 'output/importedData.pkl'
+    if not reimport and os.path.exists(path):
+        print("Loading imported data from file...")
+        with open(path, 'rb') as file:
+            return pickle.load(file)
 
     print('Start Importing')
 
@@ -36,6 +29,11 @@ def import_data():
     merged_df = pandas.merge(user_ratings_df, games_df, on='BGGId')[['Username', 'Rating', 'Name']]
     print(f'Merged data has columns: {merged_df.columns}: ')
 
+    # Reduce the size of the dataset by 99%
+    print(f'Size before reduction is: {merged_df.shape[0]}')
+    merged_df = merged_df.sample(frac=0.01, random_state=42)
+    print(f'Size after reduction is: {merged_df.shape[0]}')
+
     # Calculate the average rating
     median_rating = user_ratings_df['Rating'].median()
     print(f'Median is {median_rating} which is used for turning ratings into binary value')
@@ -50,10 +48,71 @@ def import_data():
     print("Frequency of each rating, as a lot of values fall directly on the median these values are not equal:")
     print(rating_counts)
 
+    only_likes = merged_df[merged_df['Rating'] == 'likes']
+
     print('Finished Importing\n')
 
+    with open(path, 'wb') as file:
+        pickle.dump(merged_df, file)
+    return only_likes
+
+
+def create_pykeen_data(data_to_convert, percentage, recreate=True):
+
+    path = 'output/triplesFactory.pkl'
+    if not recreate and os.path.exists(path):
+        print("Loading TriplesFactory from file...")
+        with open(path, 'rb') as file:
+            return pickle.load(file)
+
+    print('Start Converting Data')
+
+    data_to_convert = data_to_convert.astype(str)
+
+    triples = data_to_convert[['Username', 'Rating', 'Name']].values
+
+    triple_factory = TriplesFactory.from_labeled_triples(triples)
+
+    print('Triple Factory before reduction:')
+    print(triple_factory)
+
+    print('Finished Converting\n')
+
+    with open(path, 'wb') as file:
+        pickle.dump(triple_factory, file)
+    return triple_factory
 
 if __name__ == '__main__':
 
-    import_data()
-    show_data_structure()
+    reimportData = True
+    recreateTriplesFactory = False
+    percentageOfTriples = 1
+
+    importedData = import_data(reimportData)
+
+    tf = create_pykeen_data(importedData, percentageOfTriples, recreateTriplesFactory)
+
+    #training_result = train_model(tf, False)
+
+    #print(training_result)
+
+def train_model(triple_factory, recreate=True):
+
+    path = 'output/trainedModel'
+
+    if not recreate and os.path.exists(path):
+        print("Loading Trained Model...")
+        from pykeen.pipeline import PipelineResult
+        return PipelineResult.load_from_directory(path)
+
+    training, testing = triple_factory.split()
+
+    result = pipeline(
+        training=training,
+        testing=testing,
+        model='TransE',
+        epochs=5
+    )
+
+    result.save_to_directory('output/test_pre_stratified_transe')
+    return result
