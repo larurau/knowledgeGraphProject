@@ -135,19 +135,9 @@ def train_model(triples_factory, recreate=True):
         validation=validation,
         model_kwargs=dict(embedding_dim=3, random_seed=42),
         optimizer_kwargs=dict(lr=0.1),
-        training_kwargs=dict(num_epochs=5, use_tqdm_batch=False),
+        training_kwargs=dict(num_epochs=1000, use_tqdm_batch=False),
         evaluator=evaluator
     )
-
-    # Print the metrics
-    print("Evaluating trained model:")
-    print(f"Hits@1: {result.metric_results.get_metric('hits@1')}")
-    print(f"Hits@3: {result.metric_results.get_metric('hits@3')}")
-    print(f"Hits@5: {result.metric_results.get_metric('hits@5')}")
-    print(f"Hits@10: {result.metric_results.get_metric('hits@10')}")
-    print(f"Mean Reciprocal Rank: {result.metric_results.get_metric('mean_reciprocal_rank')}")
-
-    print("Finished training\n")
 
     with open(path, 'wb') as file:
         pickle.dump(result, file)
@@ -157,14 +147,22 @@ def train_model(triples_factory, recreate=True):
 if __name__ == '__main__':
 
     reimportData = True
-    recreateTriplesFactory = True
-    recreateTraining = True
-
-    randomReduction = False
     oneThousandthOfTriples = 5
-
+    randomReduction = False
     importedData = import_data(oneThousandthOfTriples, reimportData, randomReduction)
 
+    recreateTriplesFactory = True
     triples = convert_to_triples(importedData, recreateTriplesFactory)
 
+    recreateTraining = True
     training_result = train_model(triples, recreateTraining)
+
+    # Print the metrics
+    print("Evaluating trained model:")
+    print(f"Hits@1: {training_result.metric_results.get_metric('hits@1')}")
+    print(f"Hits@3: {training_result.metric_results.get_metric('hits@3')}")
+    print(f"Hits@5: {training_result.metric_results.get_metric('hits@5')}")
+    print(f"Hits@10: {training_result.metric_results.get_metric('hits@10')}")
+    print(f"Mean Reciprocal Rank: {training_result.metric_results.get_metric('mean_reciprocal_rank')}")
+
+    print("Finished training\n")
