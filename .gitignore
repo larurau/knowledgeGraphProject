@@ -10,3 +10,4 @@ output/importedData.pkl
 output/triplesFactory.pkl
 
 resources/mechanics.csv
+__pycache__/
