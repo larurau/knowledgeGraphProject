@@ -22,7 +22,6 @@ def reduce_likes_triples_by_games(likes_triples_df):
 
 
 def reduce_likes_triples(likes_triples_df, target_factor):
-
     target_size = math.trunc(likes_triples_df.shape[0] * target_factor)
 
     print(f'Trying to reduce the number of triples from {likes_triples_df.shape[0]} to below {target_size}')
@@ -72,7 +71,7 @@ def import_data(thousandths, reimport=True):
     user_ratings_df = pandas.read_csv(user_ratings_csv_path)[['BGGId', 'Rating', 'Username']]
 
     # Before merging reduce the size of the dataset
-    factor = thousandths / 1000
+    factor = thousandths / 10000
     print(f'Number of triples before reduction is {user_ratings_df.shape[0]}')
     user_ratings_df = reduce_likes_triples(user_ratings_df, factor)
     print(f'Number of triples after reduction is {user_ratings_df.shape[0]}')
@@ -93,9 +92,12 @@ def import_data(thousandths, reimport=True):
     print(f'Size of merged after only considering likes is: {only_likes.shape[0]}')
 
     # Add mechanics
+
     print("Adding mechanics:")
     mechanics_csv_path = 'resources/mechanics.csv'
     mechanics_df = pandas.read_csv(mechanics_csv_path)
+    valid_bgg_ids = user_ratings_df['BGGId'].unique()
+    mechanics_df = mechanics_df[mechanics_df['BGGId'].isin(valid_bgg_ids)]
     print(f'Size of mechanics is: {mechanics_df.shape[0]}')
     merged_mechanics_df = pandas.merge(games_df, mechanics_df, on='BGGId')
     print(f'Size of merged mechanics is: {merged_mechanics_df.shape[0]}')
