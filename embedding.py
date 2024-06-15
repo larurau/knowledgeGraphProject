@@ -7,7 +7,7 @@ from pykeen.evaluation import RankBasedEvaluator
 from pykeen.pipeline import pipeline
 
 
-def evaluate_model(training_result, model_name, file):
+def evaluate_model(training_result, model_name):
 
     print(f"Evaluating trained {model_name} model:")
     print(f"Hits@1: {training_result.metric_results.get_metric('hits@1')}")
@@ -16,10 +16,6 @@ def evaluate_model(training_result, model_name, file):
     print(f"Hits@10: {training_result.metric_results.get_metric('hits@10')}")
     print(f"Mean Reciprocal Rank: {training_result.metric_results.get_metric('mean_reciprocal_rank')}")
     print(f"Mean Rank: {training_result.metric_results.get_metric('mean_rank')}\n")
-
-    if file is not None:
-        print(f"Evaluating trained {model_name} model:", file=file)
-        print(f"Mean Rank: {training_result.metric_results.get_metric('mean_rank')}\n", file=file)
 
 
 def train_model(triples_factory, model_name, recreate=True):
@@ -65,19 +61,27 @@ def compare_models(triples_factory):
     print('*******************************************************************')
     print('Evaluating different embedding models:\n\n')
 
+    all_entities = dir(pykeen.models)
+    model_classes = [entity for entity in all_entities if inspect.isclass(getattr(pykeen.models, entity))]
+    print(model_classes)
+
+    # models_1 = ['AutoSF', 'BoxE', 'ComplEx', 'ConvE', 'ConvKB', 'CooccurrenceFilteredModel', 'CrossE', 'DistMA', 'ERMLP', 'FixedModel', 'HolE', 'KG2E', 'MuRE', 'NTN', 'PairRE', 'ProjE', 'QuatE', 'RESCAL', 'RGCN', 'RotatE', 'SE', 'SimplE', 'TorusE', 'TransD', 'TransE', 'TransF', 'TransH', 'TransR', 'TuckER', 'UM']
+    # models_2 = ['MuRE', 'QuatE', 'HolE', 'CrossE', 'RGCN', 'ERMLP']
+    models_3 = ['MuRE', 'QuatE', 'HolE', 'CrossE', 'ERMLP']
+
+    performance_results = []
+
+    for model in models_3:
+        print(f'Evaluating model: {model}')
+        trained = train_model(triples_factory, model)
+        evaluate_model(trained, model)
+        performance_results.append((trained.metric_results.get_metric('mean_rank'), model))
+        print('\n                        *******************                        \n')
+
+    print('*******************************************************************')
+
+    sorted_performance_results = sorted(performance_results, key=lambda x: x[0])
+
     with open('output\\log.txt', 'w') as file:
-        # model_names = [pykeen.models.TransE,pykeen.models.AutoSF,pykeen.models.PairRE,pykeen.models.TransF]
-
-        all_entities = dir(pykeen.models)
-        model_classes = [entity for entity in all_entities if inspect.isclass(getattr(pykeen.models, entity))]
-        print(model_classes)
-
-        all_models = ['AutoSF', 'BoxE', 'ComplEx', 'ConvE', 'ConvKB', 'CooccurrenceFilteredModel', 'CrossE', 'DistMA', 'DistMult', 'DistMultLiteral', 'DistMultLiteralGated', 'ERMLP', 'ERMLPE', 'ERModel', 'EvaluationOnlyModel', 'FixedModel', 'HolE', 'InductiveERModel', 'InductiveNodePiece', 'InductiveNodePieceGNN', 'KG2E', 'LiteralModel', 'MarginalDistributionBaseline', 'Model', 'MuRE', 'NTN', 'NodePiece', 'PairRE', 'ProjE', 'QuatE', 'RESCAL', 'RGCN', 'RotatE', 'SE', 'SimplE', 'SoftInverseTripleBaseline', 'TorusE', 'TransD', 'TransE', 'TransF', 'TransH', 'TransR', 'TuckER', 'UM']
-
-        for model in all_models:
-            print(f'Evaluating model: {model}')
-            trained = train_model(triples_factory, model)
-            evaluate_model(trained, model, file)
-            print('\n                        *******************                        \n')
-
-        print('*******************************************************************')
+        for performance_metric, model_name in sorted_performance_results:
+            print(f'{performance_metric} mean rank - {model_name}', file=file)

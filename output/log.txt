@@ -1,0 +1,5 @@
+100.00162506103516 mean rank - QuatE
+106.33979797363281 mean rank - MuRE
+115.15505981445312 mean rank - CrossE
+115.9326171875 mean rank - HolE
+118.65507507324219 mean rank - ERMLP

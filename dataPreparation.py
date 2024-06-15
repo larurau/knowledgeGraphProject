@@ -5,43 +5,43 @@ import pickle
 import pandas
 
 
-def reduce_likes_triples_by_users(likes_triples_df):
-    user_counts = likes_triples_df['Username'].value_counts()
+def reduce_like_triples_by_users(like_triples_df):
+    user_counts = like_triples_df['Username'].value_counts()
     threshold = user_counts.quantile(0.20)
     frequent_users = user_counts[user_counts > threshold].index
-    filtered_df = likes_triples_df[likes_triples_df['Username'].isin(frequent_users)]
+    filtered_df = like_triples_df[like_triples_df['Username'].isin(frequent_users)]
     return filtered_df
 
 
-def reduce_likes_triples_by_games(likes_triples_df):
-    game_counts = likes_triples_df['BGGId'].value_counts()
+def reduce_like_triples_by_games(like_triples_df):
+    game_counts = like_triples_df['BGGId'].value_counts()
     threshold = game_counts.quantile(0.20)
     frequent_games = game_counts[game_counts > threshold].index
-    filtered_df = likes_triples_df[likes_triples_df['BGGId'].isin(frequent_games)]
+    filtered_df = like_triples_df[like_triples_df['BGGId'].isin(frequent_games)]
     return filtered_df
 
 
-def reduce_likes_triples(likes_triples_df, target_factor):
-    target_size = math.trunc(likes_triples_df.shape[0] * target_factor)
+def reduce_like_triples(like_triples_df, target_factor):
+    target_size = math.trunc(like_triples_df.shape[0] * target_factor)
 
-    print(f'Trying to reduce the number of triples from {likes_triples_df.shape[0]} to below {target_size}')
-    print(f'Started with {likes_triples_df["Username"].nunique()} users')
-    print(f'Started with {likes_triples_df["BGGId"].nunique()} games')
+    print(f'Trying to reduce the number of triples from {like_triples_df.shape[0]} to below {target_size}')
+    print(f'Started with {like_triples_df["Username"].nunique()} users')
+    print(f'Started with {like_triples_df["BGGId"].nunique()} games')
 
     i = 1
-    while likes_triples_df.shape[0] > target_size:
+    while like_triples_df.shape[0] > target_size:
         print(f'Round {i}:')
         i = i + 1
-        likes_triples_df = reduce_likes_triples_by_users(likes_triples_df)
-        print(f'   Reduced size to {likes_triples_df.shape[0]} by excluding users')
-        likes_triples_df = reduce_likes_triples_by_games(likes_triples_df)
-        print(f'   Reduced size to {likes_triples_df.shape[0]} by excluding games')
+        like_triples_df = reduce_like_triples_by_users(like_triples_df)
+        print(f'   Reduced size to {like_triples_df.shape[0]} by excluding users')
+        like_triples_df = reduce_like_triples_by_games(like_triples_df)
+        print(f'   Reduced size to {like_triples_df.shape[0]} by excluding games')
 
-    print(f'Ended with {likes_triples_df["Username"].nunique()} users')
-    print(f'Ended with {likes_triples_df["BGGId"].nunique()} games')
+    print(f'Ended with {like_triples_df["Username"].nunique()} users')
+    print(f'Ended with {like_triples_df["BGGId"].nunique()} games')
     print('Sample of the resulting dataframes: ')
-    user_counts = likes_triples_df['Username'].value_counts()
-    game_counts = likes_triples_df['BGGId'].value_counts()
+    user_counts = like_triples_df['Username'].value_counts()
+    game_counts = like_triples_df['BGGId'].value_counts()
     print('The users with the most connections were:')
     print(user_counts.head(3))
     print('The users with the least connections were:')
@@ -51,10 +51,10 @@ def reduce_likes_triples(likes_triples_df, target_factor):
     print('The games with the least connections were:')
     print(game_counts.tail(3))
     print("-----------------------------")
-    return likes_triples_df
+    return like_triples_df
 
 
-def import_data(thousandths, reimport=True):
+def import_data(part, reimport=True):
     path = 'output/importedData.pkl'
     if not reimport and os.path.exists(path):
         print("Loading imported data from file...\n")
@@ -71,9 +71,9 @@ def import_data(thousandths, reimport=True):
     user_ratings_df = pandas.read_csv(user_ratings_csv_path)[['BGGId', 'Rating', 'Username']]
 
     # Before merging reduce the size of the dataset
-    factor = thousandths / 10000
+    factor = part / 10000
     print(f'Number of triples before reduction is {user_ratings_df.shape[0]}')
-    user_ratings_df = reduce_likes_triples(user_ratings_df, factor)
+    user_ratings_df = reduce_like_triples(user_ratings_df, factor)
     print(f'Number of triples after reduction is {user_ratings_df.shape[0]}')
 
     # Merge the dataframes on BGGId and select the necessary columns
@@ -84,12 +84,12 @@ def import_data(thousandths, reimport=True):
     median_rating = user_ratings_df['Rating'].median()
     print(f'Median is {median_rating} which is used for turning ratings into binary value')
 
-    # Replace 'Rating' with 'likes' if above median, 'does not like' if below or equal to the median
-    merged_df['Rating'] = merged_df['Rating'].apply(lambda x: 'likes' if x >= median_rating else 'does not like')
+    # Replace 'Rating' with 'like' if above median, 'dislike' if below or equal to the median
+    merged_df['Rating'] = merged_df['Rating'].apply(lambda x: 'like' if x >= median_rating else 'dislike')
 
-    print(f'Size of merged is: {merged_df.shape[0]}')
-    only_likes = merged_df[merged_df['Rating'] == 'likes']
-    print(f'Size of merged after only considering likes is: {only_likes.shape[0]}')
+    #print(f'Size of merged is: {merged_df.shape[0]}')
+    #only_like = merged_df[merged_df['Rating'] == 'like']
+    #print(f'Size of merged after only considering like is: {only_like.shape[0]}')
 
     # Add mechanics
 
@@ -117,11 +117,11 @@ def import_data(thousandths, reimport=True):
     print(f'Split up the number of mechanic relations is: {triples_df.shape[0]}')
 
     # Combining all triples:
-    print(f'Combining {only_likes.shape[0]}  like relations with {triples_df.shape[0]} mechanic relations')
+    print(f'Combining {merged_df.shape[0]}  like relations with {triples_df.shape[0]} mechanic relations')
     triples_df.columns = ['Subject', 'Predicate', 'Object']
-    only_likes.columns = ['Subject', 'Predicate', 'Object']
+    merged_df.columns = ['Subject', 'Predicate', 'Object']
 
-    combined_df = pandas.concat([triples_df, only_likes], ignore_index=True)
+    combined_df = pandas.concat([triples_df, merged_df], ignore_index=True)
     print(f'Combined dataframe has: {combined_df.shape[0]}')
 
     print('Finished Importing\n')

@@ -10,7 +10,7 @@ def predict_for_user(result, data, username):
     pred = predict_target(
         model=result.model,
         head=username,
-        relation="likes",
+        relation="like",
         triples_factory=result.training,
     )
     pred_filtered = pred.filter_triples(result.training)
